@@ -20,7 +20,35 @@ def search_places(
     params: PlaceSearchParams = Depends(),
     db: Session = Depends(get_db),
 ):
-    """Эндпоинт запроса в API"""
+    """
+    Выполняет поиск мест с использованием  API Foursquare и
+    сохраняет новые записи в базу данных.
+
+    Описание:
+    1. Принимает параметры запроса от пользователя
+    (поиск по названию, местоположению, ограничение по количеству).
+    2. Отправляет запрос к внешнему API Foursquare и
+    получает список подходящих мест.
+    3. Обрабатывает категории мест:
+        - проверяет существующие категории;
+        - сохраняет новые категории, если такие найдены;
+        - обновляет локальный кэш категорий.
+    4. Создаёт и сохраняет новые объекты `Place` в базу данных.
+    5. Возвращает список всех новых мест, добавленных в базу данных.
+
+    Параметры:
+    - params (PlaceSearchParams): параметры поиска,
+    такие как строка запроса, местоположение и лимит результатов.
+    - db (Session): сессия SQLAlchemy для взаимодействия с базой данных.
+
+    Возвращает:
+    - List[PlaceOut]: список новых мест, добавленных в базу данных.
+
+    Исключения:
+    - HTTPException (404): при ошибке запроса  API.
+    - HTTPException (400/500): при ошибках сохранения в базу данных
+      или других исключениях.
+    """
 
     clean_params = {
         "query": params.query,
@@ -34,7 +62,7 @@ def search_places(
         api_response = search_places_from_foursquare(clean_params)
     except Exception as e:
         raise HTTPException(
-            status_code=502,
+            status_code=404,
             detail=f"Ошибка при обращении к внешнему API: {str(e)}")
 
     results = api_response.get("results", [])
@@ -119,15 +147,13 @@ def search_places(
         raise HTTPException(
             status_code=400,
             detail=f"Ошибка целостности данных: {str(e.orig)}")
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail=f"Ошибка базы данных: {str(e)}")
-    except Exception as e:
+            status_code=500)
+    except Exception:
         db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail=f"Неизвестная ошибка: {str(e)}")
+            status_code=500)
 
     return new_places

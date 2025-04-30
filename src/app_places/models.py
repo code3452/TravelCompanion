@@ -1,6 +1,7 @@
 from sqlalchemy import (Column, Integer, String,
                         Float, DateTime, func, ForeignKey)
 from sqlalchemy.orm import relationship
+
 from src.app_places.db import Base
 
 

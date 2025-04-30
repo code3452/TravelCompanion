@@ -1,9 +1,8 @@
 import requests
 
-from fastapi import HTTPException
-
-
 from src.app_places.config import headers, url
+
+from fastapi import HTTPException
 
 
 def search_places_from_foursquare(params: dict):
